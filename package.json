@@ -1,8 +1,20 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "connect-hub",
+  "version": "1.0.0",
   "private": true,
-  "sideEffects": false,
+  "description": "",
+  "homepage": "https://github.com/youneslvptt/connect-hub#readme",
+  "bugs": {
+    "url": "https://github.com/youneslvptt/connect-hub/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/youneslvptt/connect-hub.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -70,7 +82,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^1.4.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -85,5 +96,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
-  }
+  },
+  "sideEffects": false
 }
