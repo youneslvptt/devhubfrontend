@@ -261,6 +261,8 @@ function ChatPage() {
           onTyping={handleTyping}
         />
       </main>
+
+      <OnlineUsersPanel users={onlineUsers} currentUsername={user?.username} />
     </div>
   );
 }
