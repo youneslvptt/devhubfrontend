@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2, Terminal } from "lucide-react";
 import axios from "axios";
 import { api } from "@/lib/api";
 import { saveAuth, type AuthUser } from "@/lib/auth";
+import { tryMockLogin } from "@/lib/mockUsers";
 import heroImage from "@/assets/login-hero.jpg";
 
 export const Route = createFileRoute("/login")({
@@ -31,6 +32,17 @@ function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    // 1) Frontend-only mock accounts (e.g. founder youneslvptt) — bypass backend
+    const mock = tryMockLogin(identifier, password);
+    if (mock) {
+      saveAuth(mock.token, mock.user);
+      window.dispatchEvent(new Event("auth-change"));
+      setLoading(false);
+      navigate({ to: "/chat" });
+      return;
+    }
+
     try {
       // Backend expects { email/username, password } — send both keys for compatibility
       const payload = {
