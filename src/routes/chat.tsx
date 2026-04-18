@@ -7,9 +7,10 @@ import { api } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { DEFAULT_CHANNELS, type Channel } from "@/lib/channels";
 import { ChannelSidebar } from "@/components/chat/ChannelSidebar";
-import { MessageList, type ChatMessage } from "@/components/chat/MessageList";
+import { MessageList, type ChatMessage, type MessageAttachment } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { OnlineUsersPanel, type OnlineUser } from "@/components/chat/OnlineUsersPanel";
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -29,6 +30,7 @@ function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const stopTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
@@ -86,15 +88,43 @@ function ChatPage() {
     socket.on("typing", onTyping);
     socket.on("stopTyping", onStopTyping);
 
+    // Online users — backend should emit one of these
+    const onOnlineUsers = (payload: OnlineUser[] | { users?: OnlineUser[] }) => {
+      const list = Array.isArray(payload) ? payload : (payload?.users ?? []);
+      setOnlineUsers(list);
+    };
+    const onUserJoined = (u: OnlineUser) => {
+      if (!u?.username) return;
+      setOnlineUsers((prev) =>
+        prev.some((x) => x.username === u.username) ? prev : [...prev, u],
+      );
+    };
+    const onUserLeft = (u: OnlineUser | string) => {
+      const username = typeof u === "string" ? u : u?.username;
+      if (!username) return;
+      setOnlineUsers((prev) => prev.filter((x) => x.username !== username));
+    };
+    socket.on("onlineUsers", onOnlineUsers);
+    socket.on("userJoined", onUserJoined);
+    socket.on("userLeft", onUserLeft);
+
+    // Announce ourselves so backend can include us in the list
+    if (user?.username) {
+      socket.emit("userOnline", { username: user.username, role: user.role });
+    }
+
     return () => {
       socket.off("receiveMessage", onReceive);
       socket.off("typing", onTyping);
       socket.off("stopTyping", onStopTyping);
+      socket.off("onlineUsers", onOnlineUsers);
+      socket.off("userJoined", onUserJoined);
+      socket.off("userLeft", onUserLeft);
       Object.values(typingTimers.current).forEach(clearTimeout);
       typingTimers.current = {};
       setTypingUsers([]);
     };
-  }, [isAuthenticated, activeChannel, user?.username]);
+  }, [isAuthenticated, activeChannel, user?.username, user?.role]);
 
   // Load messages on channel change
   useEffect(() => {
@@ -131,13 +161,15 @@ function ChatPage() {
     };
   }, [isAuthenticated, activeChannel, logout]);
 
-  function handleSend(content: string) {
+  function handleSend(content: string, attachments: MessageAttachment[]) {
     if (!user || !activeChannel) return;
+    if (!content && attachments.length === 0) return;
     const socket = getSocket();
     const payload = {
       sender: user.username,
       channel: activeChannel._id,
       content,
+      attachments,
     };
     socket.emit("sendMessage", payload);
     // Optimistic local append
