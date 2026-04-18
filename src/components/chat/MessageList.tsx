@@ -1,4 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText, Download } from "lucide-react";
+
+export interface MessageAttachment {
+  url: string;
+  name?: string;
+  type?: string; // mime type
+  size?: number;
+}
 
 export interface ChatMessage {
   _id?: string;
@@ -8,6 +16,7 @@ export interface ChatMessage {
   content: string;
   createdAt?: string;
   timestamp?: string;
+  attachments?: MessageAttachment[];
 }
 
 interface Props {
@@ -28,6 +37,13 @@ function formatTime(m: ChatMessage): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatBytes(n?: number) {
+  if (!n && n !== 0) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const COLORS = [
   "oklch(0.78 0.16 215)",
   "oklch(0.74 0.16 155)",
@@ -41,6 +57,11 @@ function colorFor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return COLORS[h % COLORS.length];
+}
+
+function isImage(att: MessageAttachment) {
+  if (att.type?.startsWith("image/")) return true;
+  return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(att.url);
 }
 
 export function MessageList({ messages, currentUsername }: Props) {
@@ -118,14 +139,22 @@ export function MessageList({ messages, currentUsername }: Props) {
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 space-y-1">
+                  <div className="mt-0.5 space-y-2">
                     {g.items.map((m, i) => (
-                      <p
-                        key={m._id ?? m.id ?? i}
-                        className="break-words text-[14px] leading-relaxed text-foreground/90"
-                      >
-                        {m.content}
-                      </p>
+                      <div key={m._id ?? m.id ?? i} className="space-y-2">
+                        {m.content && (
+                          <p className="break-words text-[14px] leading-relaxed text-foreground/90">
+                            {m.content}
+                          </p>
+                        )}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {m.attachments.map((att, idx) => (
+                              <Attachment key={idx} att={att} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -136,5 +165,47 @@ export function MessageList({ messages, currentUsername }: Props) {
       )}
       <div ref={bottomRef} />
     </div>
+  );
+}
+
+function Attachment({ att }: { att: MessageAttachment }) {
+  if (isImage(att)) {
+    return (
+      <a
+        href={att.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block max-w-sm overflow-hidden rounded-xl border border-border bg-surface transition-all hover:border-primary/40 hover:shadow-glow"
+      >
+        <img
+          src={att.url}
+          alt={att.name ?? "attachment"}
+          className="max-h-80 w-full object-cover"
+          loading="lazy"
+        />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={att.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={att.name}
+      className="flex max-w-sm items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 transition-all hover:border-primary/40 hover:bg-surface-elevated"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+        <FileText className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-foreground">
+          {att.name ?? "Attachment"}
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {[att.type, formatBytes(att.size)].filter(Boolean).join(" · ")}
+        </div>
+      </div>
+      <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </a>
   );
 }
