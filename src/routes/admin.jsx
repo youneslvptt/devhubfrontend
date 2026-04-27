@@ -1,4 +1,4 @@
-// admin.jsx (updated with Create Account modal)
+// admin.jsx (cleaned – only Active members and Channels cards)
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -24,16 +24,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api"; // ✅ NEW import
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { title: "Admin Dashboard - Devhub" },
-      {
-        name: "description",
-        content: "Manage workspace users, channels and activity.",
-      },
+      { name: "description", content: "Manage workspace users, channels and activity." },
     ],
   }),
   component: AdminPage,
@@ -64,21 +61,25 @@ function AdminPage() {
   const { channels, addChannel, loading: loadingChannels } = useWorkspaceChannels();
 
   const [members, setMembers] = useState([]);
+  const [onlineUserIds, setOnlineUserIds] = useState([]);
+
+  // Modal states
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [isInviteMemberOpen, setIsInviteMemberOpen] = useState(false);
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+
   const [channelName, setChannelName] = useState("");
   const [channelDescription, setChannelDescription] = useState("");
   const [memberIdentifier, setMemberIdentifier] = useState("");
   const [inviteChannelId, setInviteChannelId] = useState("");
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isInvitingMember, setIsInvitingMember] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // ✅ NEW state for Create Account modal
-  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  // Create user form
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState("developer");
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -92,37 +93,56 @@ function AdminPage() {
     }
   }, [isAuthenticated, navigate, user]);
 
-  // Fetch real members from backend
+  // Fetch members
   useEffect(() => {
     let cancelled = false;
     async function loadMembers() {
       try {
-        const fetchedMembers = await fetchWorkspaceMembers();
-        if (!cancelled) setMembers(fetchedMembers);
+        const fetched = await fetchWorkspaceMembers();
+        if (!cancelled) setMembers(fetched);
       } catch (error) {
         console.error("[admin] failed to load members", error);
         toast.error("Failed to load members");
       }
     }
     loadMembers();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch online users only (no stats)
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOnline() {
+      try {
+        const response = await api.get("/api/admin/online-users");
+        if (!cancelled) {
+          setOnlineUserIds(response.data.onlineUserIds || []);
+        }
+      } catch (error) {
+        console.error("[admin] failed to load online users", error);
+      }
+    }
+    loadOnline();
+    const interval = setInterval(loadOnline, 30000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
-  // Set default channel for invite
+  // Default invite channel
   useEffect(() => {
     if (!inviteChannelId && channels.length > 0) {
       setInviteChannelId(channels[0]._id);
     }
   }, [channels, inviteChannelId]);
 
-  // Statistics using real data
+  // Stat cards – now only two
   const statCards = useMemo(() => [
     {
       label: "Active members",
       value: String(members.length),
-      delta: `${members.filter((member) => member.status === "online").length} online now`,
+      delta: `${onlineUserIds.length} online now`,
       icon: Users,
     },
     {
@@ -131,19 +151,7 @@ function AdminPage() {
       delta: loadingChannels ? "Syncing..." : "Ready for chat",
       icon: Hash,
     },
-    {
-      label: "Messages today",
-      value: "—",
-      delta: "",
-      icon: MessageSquare,
-    },
-    {
-      label: "Engagement",
-      value: "—",
-      delta: "comming soon",
-      icon: TrendingUp,
-    },
-  ], [channels.length, loadingChannels, members]);
+  ], [channels.length, loadingChannels, members, onlineUserIds]);
 
   if (!isAuthenticated || !isAdmin(user)) {
     return (
@@ -156,31 +164,18 @@ function AdminPage() {
   async function handleCreateChannel(event) {
     event.preventDefault();
     setIsCreatingChannel(true);
-    console.log("[admin] create channel requested", {
-      name: channelName,
-      description: channelDescription,
-    });
     try {
-      const result = await addChannel({
-        name: channelName,
-        description: channelDescription,
-      });
+      const result = await addChannel({ name: channelName, description: channelDescription });
       setChannelName("");
       setChannelDescription("");
       setIsCreateChannelOpen(false);
       if (result.persisted) {
         toast.success(`Channel #${result.channel.name} created`);
       } else {
-        toast.warning(`Channel #${result.channel.name} saved locally`, {
-          description:
-            "Backend POST /api/channels was unavailable, so this is a frontend fallback.",
-        });
+        toast.warning(`Channel #${result.channel.name} saved locally`);
       }
     } catch (error) {
-      console.error("[admin] create channel failed", error);
-      toast.error("Could not create channel", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      toast.error("Could not create channel");
     } finally {
       setIsCreatingChannel(false);
     }
@@ -189,44 +184,33 @@ function AdminPage() {
   async function handleInviteMember(event) {
     event.preventDefault();
     setIsInvitingMember(true);
-    console.log("[admin] invite member requested", {
-      identifier: memberIdentifier,
-      channelId: inviteChannelId,
-    });
     try {
       const result = await inviteWorkspaceMember({
         identifier: memberIdentifier,
         channelId: inviteChannelId,
       });
-      const updatedMembers = await fetchWorkspaceMembers();
-      setMembers(updatedMembers);
+      const updated = await fetchWorkspaceMembers();
+      setMembers(updated);
       setMemberIdentifier("");
       setInviteChannelId(channels[0]?._id ?? "");
       setIsInviteMemberOpen(false);
       if (result.persisted) {
         toast.success(`Invite sent for ${result.member.username}`);
       } else {
-        toast.warning(`Invite queued for ${result.member.username}`, {
-          description:
-            "If the backend is unavailable, the invite is stored locally for preview purposes.",
-        });
+        toast.warning(`Invite queued for ${result.member.username}`);
       }
     } catch (error) {
-      console.error("[admin] invite member failed", error);
-      toast.error("Could not invite member", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
+      toast.error(error.message || "Could not invite member");
     } finally {
       setIsInvitingMember(false);
     }
   }
 
-  // ✅ NEW handler for creating a user
   async function handleCreateUser(event) {
     event.preventDefault();
     setIsCreatingUser(true);
     try {
-      await api.post("http://localhost:4000/api/auth/create-user", {
+      await api.post("/api/admin/create-user", {
         name: newUserName,
         email: newUserEmail,
         role: newUserRole,
@@ -236,24 +220,17 @@ function AdminPage() {
       setNewUserName("");
       setNewUserEmail("");
       setNewUserRole("developer");
-      // Refresh members list
-      const updatedMembers = await fetchWorkspaceMembers();
-      setMembers(updatedMembers);
+      const updated = await fetchWorkspaceMembers();
+      setMembers(updated);
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to create user"
-      );
+      toast.error(err.response?.data?.message || "Failed to create user");
     } finally {
       setIsCreatingUser(false);
     }
   }
 
   function handleChannelClick(channelId) {
-    console.log("[admin] opening channel from dashboard", { channelId });
-    navigate({
-      to: "/chat",
-      search: { channelId },
-    });
+    navigate({ to: "/chat", search: { channelId } });
   }
 
   return (
@@ -272,17 +249,12 @@ function AdminPage() {
               </Link>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="font-display text-xl font-semibold tracking-tight">
-                    Admin Dashboard
-                  </h1>
+                  <h1 className="font-display text-xl font-semibold tracking-tight">Admin Dashboard</h1>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Manage users, channels and workspace activity.
-                </p>
+                <p className="text-xs text-muted-foreground">Manage users, channels and workspace activity.</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* ✅ NEW Create Account button */}
               <button
                 type="button"
                 onClick={() => setIsCreateUserOpen(true)}
@@ -303,9 +275,8 @@ function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-7xl px-6 py-8">
-          {/* ... rest of main content unchanged ... */}
-          {/* (stat cards, members list, channels list, etc.) */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Stats – 2 columns */}
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {statCards.map((card) => (
               <div
                 key={card.label}
@@ -329,7 +300,7 @@ function AdminPage() {
           </section>
 
           <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Workspace members section unchanged */}
+            {/* Members */}
             <section className="lg:col-span-2 rounded-2xl border border-border bg-surface shadow-soft">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
@@ -345,40 +316,43 @@ function AdminPage() {
                 </button>
               </div>
               <ul className="divide-y divide-border">
-                {members.map((member) => (
-                  <li
-                    key={member.id}
-                    className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-surface-elevated/60"
-                  >
-                    <div className="relative">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-primary text-[11px] font-semibold text-primary-foreground">
-                        {member.username.slice(0, 2).toUpperCase()}
+                {members.map((member) => {
+                  const isOnline = onlineUserIds.includes(member._id);
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-surface-elevated/60"
+                    >
+                      <div className="relative">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-primary text-[11px] font-semibold text-primary-foreground">
+                          {member.username.slice(0, 2).toUpperCase()}
+                        </div>
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface ${statusDot(
+                            isOnline ? "online" : "offline"
+                          )}`}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-foreground">
+                          {member.username}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">{member.email}</div>
                       </div>
                       <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface ${statusDot(
-                          member.status
+                        className={`hidden rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider sm:inline-flex ${roleBadge(
+                          member.role
                         )}`}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-foreground">
-                        {member.username}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">{member.email}</div>
-                    </div>
-                    <span
-                      className={`hidden rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider sm:inline-flex ${roleBadge(
-                        member.role
-                      )}`}
-                    >
-                      {member.role}
-                    </span>
-                  </li>
-                ))}
+                      >
+                        {member.role}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
 
-            {/* Channels section unchanged */}
+            {/* Channels */}
             <section className="rounded-2xl border border-border bg-surface shadow-soft">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
@@ -405,13 +379,9 @@ function AdminPage() {
                         <Hash className="h-4 w-4 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {channel.name}
-                        </div>
+                        <div className="truncate text-sm font-medium text-foreground">{channel.name}</div>
                         {channel.description && (
-                          <div className="truncate text-xs text-muted-foreground">
-                            {channel.description}
-                          </div>
+                          <div className="truncate text-xs text-muted-foreground">{channel.description}</div>
                         )}
                       </div>
                     </button>
@@ -423,17 +393,107 @@ function AdminPage() {
         </main>
       </div>
 
-      {/* Existing Create Channel Dialog unchanged ... */}
+      {/* Create Channel Dialog */}
       <Dialog open={isCreateChannelOpen} onOpenChange={setIsCreateChannelOpen}>
-        {/* ... same as before ... */}
+        <DialogContent className="border-border bg-surface">
+          <DialogHeader>
+            <DialogTitle>Create channel</DialogTitle>
+            <DialogDescription>Add a new room for your team.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleCreateChannel}>
+            <div className="space-y-2">
+              <Label htmlFor="channel-name">Channel name</Label>
+              <Input
+                id="channel-name"
+                value={channelName}
+                onChange={(e) => setChannelName(e.target.value)}
+                placeholder="frontend-platform"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="channel-description">Description</Label>
+              <Input
+                id="channel-description"
+                value={channelDescription}
+                onChange={(e) => setChannelDescription(e.target.value)}
+                placeholder="Discuss UI architecture"
+              />
+            </div>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setIsCreateChannelOpen(false)}
+                className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingChannel}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              >
+                {isCreatingChannel ? "Creating..." : "Create channel"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
 
-      {/* Existing Invite Member Dialog unchanged ... */}
+      {/* Invite Member Dialog */}
       <Dialog open={isInviteMemberOpen} onOpenChange={setIsInviteMemberOpen}>
-        {/* ... same as before ... */}
+        <DialogContent className="border-border bg-surface">
+          <DialogHeader>
+            <DialogTitle>Invite member</DialogTitle>
+            <DialogDescription>Enter a user ID or email to add to a channel.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleInviteMember}>
+            <div className="space-y-2">
+              <Label htmlFor="member-identifier">User ID or email</Label>
+              <Input
+                id="member-identifier"
+                value={memberIdentifier}
+                onChange={(e) => setMemberIdentifier(e.target.value)}
+                placeholder="userId or user@example.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-channel">Channel</Label>
+              <select
+                id="invite-channel"
+                value={inviteChannelId}
+                onChange={(e) => setInviteChannelId(e.target.value)}
+                className="h-12 w-full rounded-xl border border-border bg-surface px-4 text-sm text-foreground outline-none focus:border-primary"
+              >
+                {channels.map((channel) => (
+                  <option key={channel._id} value={channel._id}>
+                    #{channel.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setIsInviteMemberOpen(false)}
+                className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isInvitingMember}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              >
+                {isInvitingMember ? "Inviting..." : "Send invite"}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
 
-      {/* ✅ NEW Create User Dialog */}
+      {/* Create User Dialog */}
       <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
         <DialogContent className="border-border bg-surface">
           <DialogHeader>
@@ -480,14 +540,14 @@ function AdminPage() {
               <button
                 type="button"
                 onClick={() => setIsCreateUserOpen(false)}
-                className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isCreatingUser}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
               >
                 {isCreatingUser ? "Creating..." : "Create Account"}
               </button>

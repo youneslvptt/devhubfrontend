@@ -102,27 +102,33 @@ const ADD_MEMBER_API_PATH = "/api/chat/channel/add-member";
 export async function inviteWorkspaceMember({ identifier, channelId }) {
   const cleaned = identifier.trim();
   
-  // No local fallback – we rely entirely on the backend
   console.log("[members] inviting member via backend", {
     channelId,
     userId: cleaned,
   });
   
-  const response = await api.post(ADD_MEMBER_API_PATH, {
-    channelId,
-    userId: cleaned,
-  });
-  
-  const member = normalizeMember(
-    response.data?.member ?? response.data?.data ?? response.data
-  );
-  
-  if (!member) {
-    throw new Error("Backend did not return a valid member");
+  try {
+    const response = await api.post(ADD_MEMBER_API_PATH, {
+      channelId,
+      userId: cleaned,
+    });
+    
+    const member = normalizeMember(
+      response.data?.member ?? response.data?.data ?? response.data
+    );
+    
+    if (!member) {
+      throw new Error("Backend did not return a valid member");
+    }
+    
+    // Refresh local cache with a fresh fetch
+    await fetchWorkspaceMembers();
+    
+    return { member, persisted: true, requiresBackend: false };
+  } catch (error) {
+    const serverMessage =
+      error.response?.data?.message || error.message || "Unknown error";
+    console.error("[members] invite failed:", serverMessage);
+    throw new Error(serverMessage);
   }
-  
-  // Refresh local cache with a fresh fetch
-  await fetchWorkspaceMembers();
-  
-  return { member, persisted: true, requiresBackend: false };
 }

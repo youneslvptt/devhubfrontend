@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Download } from "lucide-react";
+import { API_URL } from "@/lib/config";
+
+function resolveAttachmentUrl(url) {
+  if (!url) return "";
+  if (/^(https?:|blob:)/i.test(url)) return url;
+  return `${API_URL}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 function getSenderName(m) {
     if (typeof m.sender === "string")
         return m.sender;
@@ -117,12 +125,13 @@ export function MessageList({ messages, currentUsername }) {
     </div>);
 }
 function Attachment({ att }) {
+    const resolvedUrl = resolveAttachmentUrl(att.url);
     if (isImage(att)) {
-        return (<a href={att.url} target="_blank" rel="noopener noreferrer" className="block max-w-sm overflow-hidden rounded-xl border border-border bg-surface transition-all hover:border-primary/40 hover:shadow-glow">
-        <img src={`http://localhost:4000${att.url}`} alt={att.url ?? "attachment"} className="max-h-80 w-full object-cover" loading="lazy"/>
+        return (<a href={resolvedUrl} target="_blank" rel="noopener noreferrer" className="block max-w-sm overflow-hidden rounded-xl border border-border bg-surface transition-all hover:border-primary/40 hover:shadow-glow">
+        <img src={resolvedUrl} alt={att.name ?? "attachment"} className="max-h-80 w-full object-cover" loading="lazy"/>
       </a>);
     }
-    return (<a href={att.url} target="_blank" rel="noopener noreferrer" download={att.name} className="flex max-w-sm items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 transition-all hover:border-primary/40 hover:bg-surface-elevated">
+    return (<a href={resolvedUrl} target="_blank" rel="noopener noreferrer" download={att.name} className="flex max-w-sm items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 transition-all hover:border-primary/40 hover:bg-surface-elevated">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
         <FileText className="h-5 w-5"/>
       </div>
