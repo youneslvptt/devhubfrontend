@@ -102,7 +102,7 @@ export function MessageList({ messages, currentUsername }) {
                   <div className="mt-0.5 space-y-2">
                     {g.items.map((m, i) => (<div key={m._id ?? m.id ?? i} className="space-y-2">
                         {m.content && (<p className="break-words text-[14px] leading-relaxed text-foreground/90">
-                            {m.content}
+                            {m.content} 
                           </p>)}
                         {m.attachments && m.attachments.length > 0 && (<div className="flex flex-wrap gap-2">
                             {m.attachments.map((att, idx) => (<Attachment key={idx} att={att}/>))}
@@ -119,7 +119,7 @@ export function MessageList({ messages, currentUsername }) {
 function Attachment({ att }) {
     if (isImage(att)) {
         return (<a href={att.url} target="_blank" rel="noopener noreferrer" className="block max-w-sm overflow-hidden rounded-xl border border-border bg-surface transition-all hover:border-primary/40 hover:shadow-glow">
-        <img src={att.url} alt={att.name ?? "attachment"} className="max-h-80 w-full object-cover" loading="lazy"/>
+        <img src={`http://localhost:4000${att.url}`} alt={att.url ?? "attachment"} className="max-h-80 w-full object-cover" loading="lazy"/>
       </a>);
     }
     return (<a href={att.url} target="_blank" rel="noopener noreferrer" download={att.name} className="flex max-w-sm items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 transition-all hover:border-primary/40 hover:bg-surface-elevated">

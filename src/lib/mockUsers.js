@@ -6,7 +6,7 @@ const MOCK_ACCOUNTS = [
             _id: "mock-founder-youneslvptt",
             username: "youneslvptt",
             email: "youneslvptt@devhub.local",
-            role: "founder",
+            role: "developer",
         },
         token: "mock-token-youneslvptt",
     },

@@ -10,7 +10,7 @@ export function ChannelSidebar({ channels, activeChannelId, onSelect, user, onLo
           <Terminal className="h-4 w-4 text-primary-foreground"/>
         </div>
         <span className="font-display text-base font-semibold tracking-tight">
-          devhub
+          GlobalTech - devhub
         </span>
       </div>
 

@@ -22,7 +22,7 @@ export const Route = createRootRoute({
         meta: [
             { charSet: "utf-8" },
             { name: "viewport", content: "width=device-width, initial-scale=1" },
-            { title: "Devhub — Real-time chat for engineering teams" },
+            { title: "GlobalTech Devhub — Real-time chat for engineering teams" },
             {
                 name: "description",
                 content: "Premium real-time messaging for developer teams. Channels, typing indicators, and admin tooling built for IT companies.",

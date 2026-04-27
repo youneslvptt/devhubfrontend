@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createChannel, fetchChannels, getStoredChannels, } from "@/lib/channels";
+import { createChannel, fetchChannels, getStoredChannels } from "@/lib/channels";
 export function useWorkspaceChannels() {
     const [channels, setChannels] = useState(() => getStoredChannels());
     const [loading, setLoading] = useState(true);
