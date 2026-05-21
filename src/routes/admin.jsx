@@ -210,7 +210,7 @@ function AdminPage() {
     event.preventDefault();
     setIsCreatingUser(true);
     try {
-      await api.post("/api/admin/create-user", {
+      await api.post("/api/auth/create-user", {
         name: newUserName,
         email: newUserEmail,
         role: newUserRole,

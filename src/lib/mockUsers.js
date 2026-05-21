@@ -6,10 +6,11 @@ const MOCK_ACCOUNTS = [
             _id: "mock-founder-youneslvptt",
             username: "youneslvptt",
             email: "youneslvptt@devhub.local",
-            role: "developer",
+            role: "admin",
         },
         token: "mock-token-youneslvptt",
     },
+    
 ];
 export function tryMockLogin(identifier, password) {
     const id = identifier.trim().toLowerCase();
