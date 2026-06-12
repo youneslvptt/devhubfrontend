@@ -50,7 +50,6 @@
 :root {
   --radius: 0.75rem;
 
-  /* Dark by default — premium dev SaaS */
   --background: oklch(0.16 0.012 240);
   --foreground: oklch(0.96 0.005 240);
 
@@ -90,7 +89,6 @@
   --sidebar-accent: oklch(0.22 0.018 240);
   --sidebar-border: oklch(0.24 0.014 240);
 
-  /* Effects */
   --gradient-primary: linear-gradient(135deg, oklch(0.78 0.16 215), oklch(0.62 0.2 260));
   --gradient-glow: radial-gradient(circle at 30% 20%, oklch(0.78 0.16 215 / 0.35), transparent 60%);
   --shadow-glow: 0 0 40px -8px oklch(0.78 0.16 215 / 0.55);
@@ -101,7 +99,6 @@
 }
 
 .dark {
-  /* Same — app is dark-only */
   --background: oklch(0.16 0.012 240);
   --foreground: oklch(0.96 0.005 240);
 }

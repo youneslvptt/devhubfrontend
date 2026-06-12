@@ -41,7 +41,6 @@ export function ChannelSidebar({ channels, activeChannelId, onSelect, user, onLo
           </>)}
       </div>
 
-      {/* User card */}
       <div className="border-t border-sidebar-border bg-sidebar p-3">
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-accent/60 p-2">
           <div className="relative">

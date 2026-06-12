@@ -17,7 +17,6 @@ function ChangePasswordPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Check if user is logged in (redirect if not)
   const token = getToken();
   if (typeof window !== "undefined" && !token) {
     navigate({ to: "/login" });
@@ -37,7 +36,6 @@ function ChangePasswordPage() {
         { password },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Update local user data (remove mustChangePassword flag)
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       user.mustChangePassword = false;
       saveAuth(token, user);

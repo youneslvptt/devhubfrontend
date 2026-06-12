@@ -1,4 +1,3 @@
-// admin.jsx (cleaned – only Active members and Channels cards)
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -63,7 +62,6 @@ function AdminPage() {
   const [members, setMembers] = useState([]);
   const [onlineUserIds, setOnlineUserIds] = useState([]);
 
-  // Modal states
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [isInviteMemberOpen, setIsInviteMemberOpen] = useState(false);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
@@ -76,12 +74,10 @@ function AdminPage() {
   const [isInvitingMember, setIsInvitingMember] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // Create user form
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState("developer");
 
-  // Redirect if not authenticated or not admin
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isAuthenticated) {
@@ -93,7 +89,6 @@ function AdminPage() {
     }
   }, [isAuthenticated, navigate, user]);
 
-  // Fetch members
   useEffect(() => {
     let cancelled = false;
     async function loadMembers() {
@@ -109,7 +104,6 @@ function AdminPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch online users only (no stats)
   useEffect(() => {
     let cancelled = false;
     async function loadOnline() {
@@ -130,14 +124,12 @@ function AdminPage() {
     };
   }, []);
 
-  // Default invite channel
   useEffect(() => {
     if (!inviteChannelId && channels.length > 0) {
       setInviteChannelId(channels[0]._id);
     }
   }, [channels, inviteChannelId]);
 
-  // Stat cards – now only two
   const statCards = useMemo(() => [
     {
       label: "Active members",
@@ -275,7 +267,6 @@ function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-7xl px-6 py-8">
-          {/* Stats – 2 columns */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {statCards.map((card) => (
               <div
@@ -300,7 +291,6 @@ function AdminPage() {
           </section>
 
           <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Members */}
             <section className="lg:col-span-2 rounded-2xl border border-border bg-surface shadow-soft">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
@@ -352,7 +342,6 @@ function AdminPage() {
               </ul>
             </section>
 
-            {/* Channels */}
             <section className="rounded-2xl border border-border bg-surface shadow-soft">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
@@ -393,7 +382,6 @@ function AdminPage() {
         </main>
       </div>
 
-      {/* Create Channel Dialog */}
       <Dialog open={isCreateChannelOpen} onOpenChange={setIsCreateChannelOpen}>
         <DialogContent className="border-border bg-surface">
           <DialogHeader>
@@ -440,7 +428,6 @@ function AdminPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite Member Dialog */}
       <Dialog open={isInviteMemberOpen} onOpenChange={setIsInviteMemberOpen}>
         <DialogContent className="border-border bg-surface">
           <DialogHeader>
@@ -493,7 +480,6 @@ function AdminPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create User Dialog */}
       <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
         <DialogContent className="border-border bg-surface">
           <DialogHeader>

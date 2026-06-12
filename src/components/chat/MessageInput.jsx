@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Send, Paperclip, Image as ImageIcon, X, FileText, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
-const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -24,7 +24,6 @@ async function uploadFile(file) {
       size: data?.size ?? file.size,
     };
   } catch {
-    // Fallback: local blob URL (backup)
     return {
       url: URL.createObjectURL(file),
       name: file.name,

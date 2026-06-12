@@ -14,7 +14,6 @@ function colorFor(name) {
     return COLORS[h % COLORS.length];
 }
 export function OnlineUsersPanel({ users, currentUsername }) {
-    // Dedupe by username, current user first
     const seen = new Set();
     const sorted = [...users]
         .filter((u) => {
